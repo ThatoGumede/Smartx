@@ -1,0 +1,33 @@
+﻿@page
+@model DashboardModel
+@{
+    ViewData["Title"] = "Live Dashboard";
+}
+
+<div class="d-flex justify-content-between align-items-start flex-wrap mb-2">
+    <div>
+        <h1 class="h3 mb-1">Live Telemetry Dashboard</h1>
+        <p class="text-secondary mb-0" style="max-width: 60ch;">
+            Pre-attentive visual encoding, not a progress bar: colour and outline weight are
+            reserved exclusively for state changes, so a breach or a dropped connection should
+            register before you've consciously read a single tile.
+        </p>
+    </div>
+    <div class="text-end">
+        <div class="small text-secondary">Polling every 3s &middot; last update: <span id="lastPoll">&ndash;</span></div>
+        <div class="legend mt-2">
+            <span class="legend-swatch status-Normal"></span> Normal
+            <span class="legend-swatch status-Warning"></span> Warning
+            <span class="legend-swatch status-Critical"></span> Critical
+            <span class="legend-swatch status-Disconnected"></span> Disconnected
+        </div>
+    </div>
+</div>
+
+<div id="tileGrid" class="tile-grid mt-3">
+    <p class="text-secondary">Loading sensor state&hellip;</p>
+</div>
+
+@section Scripts {
+    <script src="~/js/dashboard.js" asp-append-version="true"></script>
+}

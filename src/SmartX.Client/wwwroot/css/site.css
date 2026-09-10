@@ -1,0 +1,58 @@
+/* Smart-X dashboard styling - implements the pre-attentive visual encoding strategy
+   chosen in the Part 1 research report. Colour and outline weight are reserved
+   exclusively for state, and a "heartbeat" pulse (not a progress bar) communicates
+   data freshness at a glance. */
+
+body { background-color: #f5f7f9; }
+
+.pillar-card { transition: transform .15s ease, box-shadow .15s ease; }
+.pillar-enabled:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.1); }
+.pillar-disabled { opacity: .72; }
+
+.tile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.sensor-tile {
+    border-radius: .6rem;
+    padding: 1rem;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    border: 2px solid transparent;
+    transition: background-color .4s ease, border-color .4s ease;
+}
+
+.sensor-tile .label { font-size: .78rem; opacity: .9; line-height: 1.25; }
+.sensor-tile .value { font-size: 1.9rem; font-weight: 700; margin: .25rem 0; }
+.sensor-tile .meta { font-size: .72rem; opacity: .85; }
+
+/* Pre-attentive colour bands - reserved ONLY for these four states, never decorative. */
+.status-Normal        { background-color: #2e7d32; }
+.status-Warning        { background-color: #f9a825; }
+.status-Critical        { background-color: #c62828; border-color: #ffcdd2; }
+.status-Disconnected  { background-color: #757575; border-style: dashed; border-color: #bdbdbd; }
+
+/* Heartbeat pulse: a live sensor's tile "breathes" in time with its own publish
+   interval, so freshness is felt, not just labelled - deliberately NOT a progress bar. */
+@keyframes heartbeat {
+    0%   { box-shadow: 0 0 0 0 rgba(255,255,255,.35); }
+    70%  { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+}
+.sensor-tile.pulsing { animation: heartbeat 2.4s ease-out infinite; }
+
+.sensor-tile.status-Critical.pulsing { animation-duration: 1s; }
+
+.legend-swatch {
+    display: inline-block;
+    width: .8rem; height: .8rem;
+    border-radius: .2rem;
+    margin: 0 .25rem 0 .75rem;
+    vertical-align: middle;
+}
+.legend-swatch:first-child { margin-left: 0; }
+
+#validationResult .alert { margin-bottom: 0; }
