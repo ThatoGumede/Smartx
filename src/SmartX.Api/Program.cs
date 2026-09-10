@@ -12,7 +12,7 @@ builder.Services.AddCors(options =>
     {
         // Origins the Razor Pages client is served from (local dev + Docker compose service name).
         var allowedOrigins = builder.Configuration.GetSection("AllowedClientOrigins").Get<string[]>()
-            ?? ["http://localhost:5100", "https://localhost:5101", "http://smartx-client:8080"];
+            ?? ["http://localhost:5100"];
 
         policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
