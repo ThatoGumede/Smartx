@@ -1,0 +1,37 @@
+using SmartX.Api.Data;
+using SmartX.Api.Services;
+using SmartX.Core.Sensors;
+
+namespace SmartX.Api.Endpoints;
+
+public static class SensorEndpoints
+{
+    public static void MapSensorEndpoints(this WebApplication app)
+    {
+        var group = app.MapGroup("/api/sensors").WithTags("Sensors");
+
+        group.MapPost("/", (RegisterSensorRequest request, SensorStore store) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.MacAddress) || string.IsNullOrWhiteSpace(request.DeploymentLocation))
+                return Results.BadRequest("macAddress and deploymentLocation are required.");
+
+            var profile = new SensorProfile
+            {
+                MacAddress = request.MacAddress,
+                DeploymentLocation = request.DeploymentLocation,
+                Category = request.Category,
+            };
+
+            store.Register(profile);
+            return Results.Created($"/api/sensors/{profile.Id}", profile);
+        });
+
+        group.MapGet("/", (SensorStore store) => Results.Ok(store.GetAll()));
+
+        group.MapGet("/{id}", (string id, SensorStore store) =>
+            store.Get(id) is { } profile ? Results.Ok(profile) : Results.NotFound());
+
+        group.MapDelete("/{id}", (string id, SensorStore store) =>
+            store.Remove(id) ? Results.NoContent() : Results.NotFound());
+    }
+}
