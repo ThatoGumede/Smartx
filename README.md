@@ -1,10 +1,8 @@
 # Smart-X IoT Mesh Ecosystem — Part 1: Ingestion & Validation Gateway
 
-Portfolio of Evidence — Part 1, Task 2 (Implementation, 80 marks).
-
-A .NET 10 Minimal API ingestion gateway (`SmartX.Api`) and a Razor Pages configuration
-dashboard (`SmartX.Client`), sharing a domain class library (`SmartX.Core`), built for the
-Smart-X hybrid IoT mesh scenario.
+This is my Part 1 implementation for the Smart-X Portfolio of Evidence: a .NET 10 Minimal
+API ingestion gateway (`SmartX.Api`) and a Razor Pages configuration dashboard
+(`SmartX.Client`), sharing a domain class library (`SmartX.Core`).
 
 ## Architecture
 
@@ -13,160 +11,158 @@ smartx/
 ├── SmartX.sln
 ├── docker-compose.yml
 ├── src/
-│   ├── SmartX.Core/     # Domain library: no ASP.NET dependency, fully unit-testable
+│   ├── SmartX.Core/     # domain library — no ASP.NET dependency
 │   ├── SmartX.Api/      # ASP.NET Core Minimal API — the ingestion/validation gateway
 │   └── SmartX.Client/   # ASP.NET Core Razor Pages — the configuration dashboard UI
 └── README.md
 ```
 
-The Client is a **separate process** from the API and talks to it purely over HTTP, from
-JavaScript running in the browser (`wwwroot/js/*.js`) — there is no server-to-server proxying.
-This was a deliberate choice: it keeps the "frontend communicates with the API layer to push
-and retrieve data" requirement unambiguous, and it means the two pieces can be deployed,
-scaled, or replaced independently, matching the brief's *Web-First* architecture option
-(ASP.NET Core Minimal API backend + a browser-based frontend).
+The client is a separate process from the API and talks to it purely over HTTP, from
+JavaScript running in the browser (`wwwroot/js/*.js`). There's no server-to-server
+proxying between them. I did this deliberately so the "frontend communicates with the API
+layer to push and retrieve data" requirement stays unambiguous, and so the two halves can be
+deployed or replaced independently — which fits the brief's Web-First option of an ASP.NET
+Core Minimal API backend paired with a browser-based frontend.
 
-## Why Razor Pages rather than Blazor/React
+**Why Razor Pages instead of Blazor or React.** All three functional requirements could have
+been met with any of the permitted frontend choices. I went with Razor Pages because the
+whole solution then compiles and runs from a single `dotnet` toolchain, with no separate
+frontend build step — no `npm install`, no WebAssembly download. Given that the brief says no
+marks are awarded at all if the code doesn't compile and run, I wanted to remove as many moving
+parts as I could. Bootstrap is vendored locally under `wwwroot/lib` by the project template, so
+there's no CDN dependency either.
 
-The functional requirements were implementable equally well with any of the permitted
-frontend choices. Razor Pages was chosen specifically so the **entire solution compiles and
-runs from a single `dotnet` toolchain with zero external frontend build steps** (no `npm
-install`, no WebAssembly download) — directly serving the "if the code does not compile and
-run, no marks are awarded" requirement. Bootstrap is vendored locally under `wwwroot/lib`
-(added by the project template), so the UI has no CDN dependency either.
+## Where the required C# concepts live
 
-## Where each required C# concept lives
-
-| Requirement | File | Notes |
+| Concept | File | What's there |
 |---|---|---|
-| **Generics** | `SmartX.Core/Telemetry/TelemetryPacket.cs` | `TelemetryPacket<T>` is a `readonly struct` constrained to `where T : struct`, so `TelemetryPacket<float>`, `<int>` and `<bool>` are distinct value types with no boxing. Instantiated for all three sensor payload types in `SmartX.Api/Endpoints/TelemetryEndpoints.cs`. |
-| **Operator overloading** | `SmartX.Core/Power/PowerReading.cs` | Overloads `+`, `-`, `==`, `!=`, `<`, `>`, `<=`, `>=` on `PowerReading`. Exercised via `GET /api/power/compare/{a}/{b}` in `SmartX.Api/Services/PowerComparisonService.cs`. |
-| **Advanced arrays (jagged) + List\<T\>** | `SmartX.Core/Telemetry/TelemetryBatchBuffer.cs` | Buffers historical batches as `float[][]` (each batch can be a different length), then `FlattenToPackets()` transfers them into a `List<TelemetryPacket<float>>`. Wired up via `POST /api/telemetry/{sensorId}/batch`. |
-| **Recursion** | `SmartX.Core/Deployment/DeploymentValidator.cs` | `ValidateRecursive` walks a `DeploymentNode` tree (Facility → Zone → SubZone → Node) tier by tier, recursing into every child. Exposed via `POST /api/deployment/validate`. |
+| Generics | `SmartX.Core/Telemetry/TelemetryPacket.cs` | `TelemetryPacket<T>` is a `readonly struct` constrained to `where T : struct`, so `TelemetryPacket<float>`, `<int>` and `<bool>` are separate value types and nothing gets boxed. Instantiated for all three sensor payload types in `SmartX.Api/Endpoints/TelemetryEndpoints.cs`. |
+| Operator overloading | `SmartX.Core/Power/PowerReading.cs` | Overloads `+`, `-`, `==`, `!=`, `<`, `>`, `<=`, `>=` on `PowerReading`. Exercised through `GET /api/power/compare/{a}/{b}` in `SmartX.Api/Services/PowerComparisonService.cs`. |
+| Jagged arrays + List\<T\> | `SmartX.Core/Telemetry/TelemetryBatchBuffer.cs` | Historical batches come in as `float[][]` — each batch can be a different length — and `FlattenToPackets()` transfers them into a `List<TelemetryPacket<float>>`. Wired up through `POST /api/telemetry/{sensorId}/batch`. |
+| Recursion | `SmartX.Core/Deployment/DeploymentValidator.cs` | `ValidateRecursive` walks a `DeploymentNode` tree (Facility → Zone → SubZone → Node) tier by tier, recursing into every child. Exposed through `POST /api/deployment/validate`. |
 
-## Where each functional requirement lives
+## Where the functional requirements live
 
 | Requirement | Implementation |
 |---|---|
-| Startup landing page, 3 pillars (1 active, 2 disabled) | `SmartX.Client/Pages/Index.cshtml` |
-| Web API ingestion layer | `SmartX.Api` (all endpoints under `/api/...`) |
+| Landing page with 3 pillars (1 active, 2 disabled) | `SmartX.Client/Pages/Index.cshtml` |
+| Web API ingestion layer | `SmartX.Api`, everything under `/api/...` |
 | Sensor payload registration (MAC, location, category) | `POST /api/sensors`, UI at `SmartX.Client/Pages/Sensors.cshtml` |
 | Media/log attachment via multipart upload | `POST /api/sensors/{id}/media`, `SmartX.Api/Services/MediaStorageService.cs` |
-| Dynamic engagement feature (not a progress bar) | `SmartX.Client/Pages/Dashboard.cshtml` + `wwwroot/js/dashboard.js` + `wwwroot/css/site.css` — pre-attentive colour/outline-coded tiles with a "heartbeat" pulse tied to data freshness, implementing the strategy justified in the Part 1 research report |
-| Heavy mock telemetry seeding, under load | `SmartX.Api/Services/MockTelemetryBackgroundService.cs` — seeds 5 default sensors and generates a new reading for **every** registered sensor (including ones you add yourself) every 3 seconds, with periodic simulated spikes and disconnects |
+| Dynamic engagement feature (not a progress bar) | `SmartX.Client/Pages/Dashboard.cshtml` with `wwwroot/js/dashboard.js` and `wwwroot/css/site.css` — pre-attentive colour and outline-coded tiles with a heartbeat pulse tied to data freshness, carrying through the strategy I justified in the Part 1 research report |
+| Heavy mock telemetry seeding under load | `SmartX.Api/Services/MockTelemetryBackgroundService.cs` — seeds 5 default sensors and generates a new reading for every registered sensor, including ones added through the UI, every 3 seconds, with occasional simulated spikes and disconnects |
 
-## Prerequisites
+## Getting it running
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download) (`dotnet --version` should report `10.x`)
-- (Optional) Docker + Docker Compose, if you want to run it containerised
-- No database, no external NuGet feeds beyond the default nuget.org are required — both
-  projects only depend on the ASP.NET Core shared framework
+You need the [.NET 10 SDK](https://dotnet.microsoft.com/download) — `dotnet --version`
+should report `10.x`. Docker is optional. Neither project needs a database or any NuGet feed
+beyond the default nuget.org; both only depend on the ASP.NET Core shared framework.
 
-## Running locally (no Docker)
+The API and client are independent processes, so run them in two terminals.
 
-Open **two terminals** — the API and the Client are independent processes.
-
-**Terminal 1 — API (ingestion gateway):**
+Terminal 1, the ingestion gateway:
 ```bash
 cd src/SmartX.Api
 dotnet restore
 dotnet build
 dotnet run
-# Listens on http://localhost:5050
+# listens on http://localhost:5050
 ```
 
-**Terminal 2 — Client (configuration dashboard):**
+Terminal 2, the configuration dashboard:
 ```bash
 cd src/SmartX.Client
 dotnet restore
 dotnet build
 dotnet run
-# Listens on http://localhost:5100
+# listens on http://localhost:5100
 ```
 
-Then open **http://localhost:5100** in a browser. Within a few seconds of the API starting,
-its background service seeds 5 default sensors, so the Dashboard page should show tiles
-immediately.
+Then open http://localhost:5100. The API seeds 5 default sensors a few seconds after
+starting, so the dashboard should show tiles straight away.
 
-Or, to build/restore the whole solution in one step from the repository root:
+If you just want to confirm the whole solution builds without running anything, do it from
+the repo root:
 ```bash
 dotnet restore SmartX.sln
 dotnet build SmartX.sln
 ```
-(you still need to `dotnet run` the API and Client separately, in their own terminals, since
-they are two independently-hosted processes.)
+You'd still `dotnet run` the API and client separately afterwards, since they're two
+independently hosted processes.
 
 ## Running with Docker Compose
 
 ```bash
 docker compose up --build
 ```
-This builds and starts both containers:
-- API published at **http://localhost:5050**
-- Client published at **http://localhost:5100**
+This builds and starts both containers — the API published at http://localhost:5050, the
+client at http://localhost:5100. Stop with `docker compose down` (add `-v` if you also want
+to clear the named upload volume).
 
-Stop with `docker compose down` (add `-v` to also clear the named upload volume).
+One thing worth flagging: the client's `ApiBaseUrl` is set to the host-published API address
+(`http://localhost:5050`), not an internal Docker service name. Every API call happens
+client-side, from JavaScript running in your browser, and your browser sits outside the
+Docker network — it can only reach either container through its published port.
 
-> The Client's `ApiBaseUrl` is deliberately the **host-published** API URL
-> (`http://localhost:5050`), not an internal Docker service name — every API call is made
-> client-side by JavaScript running in your browser, which is outside the Docker network and
-> can only reach containers via their published ports.
+## Trying it out
 
-## Trying it out / demo script
-
-1. Open **http://localhost:5100** — the landing page shows the three architectural pillars;
-   only *Sensor Data Ingestion & Telemetry* is active.
-2. Open **Live Dashboard** — five default sensors are already reporting mock telemetry, colour
-   coded (green/amber/red) with a live heartbeat pulse; watch for one to grey out
-   ("Disconnected") or flash red ("Critical") over the next minute or two.
-3. Open **Sensor Ingestion** — register a new sensor (MAC address, location, category). It
-   appears in the table immediately, and starts appearing on the Dashboard within ~3 seconds
-   as the background mock service picks it up.
-4. Attach a file (a config file, a photo, a log) to any sensor via the **Attach** control.
-5. In the **Deployment Tree Validation** panel, click **Load Sample Tree** then **Validate** to
-   see the recursive validator pass; edit a node's `tier` value to something out of order and
+1. Open http://localhost:5100. The landing page shows the three architectural pillars; only
+   *Sensor Data Ingestion & Telemetry* is active.
+2. Open Live Dashboard. Five default sensors are already reporting mock telemetry, colour
+   coded green/amber/red with a live heartbeat pulse. Give it a minute or two and you should
+   see one grey out (disconnected) or flash red (critical).
+3. Open Sensor Ingestion and register a new sensor with a MAC address, location, and
+   category. It appears in the table immediately, and shows up on the dashboard within about
+   3 seconds once the background service picks it up.
+4. Attach a file — a config file, a photo, a log, whatever — to any sensor through the Attach
+   control.
+5. In the Deployment Tree Validation panel, click Load Sample Tree then Validate to see the
+   recursive validator pass. Change a node's `tier` value to something out of order and
    validate again to see it fail with a specific error.
-6. Inspect `GET http://localhost:5050/api/power/compare/{meterIdA}/{meterIdB}` (swap in two of
-   the seeded `PowerConsumption` sensor IDs from `GET /api/sensors`) to see the overloaded
-   operator output (`aggregate`, `delta`, `aIsHigher`, `areEqual`).
+6. Hit `GET http://localhost:5050/api/power/compare/{meterIdA}/{meterIdB}` with two of the
+   seeded `PowerConsumption` sensor IDs (grab them from `GET /api/sensors`) to see the
+   overloaded-operator output: `aggregate`, `delta`, `aIsHigher`, `areEqual`.
 
-## API reference (summary)
+## API reference
 
 | Method | Route | Purpose |
 |---|---|---|
-| `POST` | `/api/sensors` | Register a sensor profile |
-| `GET` | `/api/sensors` | List all sensors |
-| `GET` | `/api/sensors/{id}` | Get one sensor |
-| `DELETE` | `/api/sensors/{id}` | Remove a sensor |
-| `POST` | `/api/sensors/{id}/media` | Multipart file upload (config/photo/log) |
-| `GET` | `/api/sensors/{id}/media` | List attachments |
-| `GET` | `/api/sensors/{id}/media/{mediaId}/download` | Download an attachment |
-| `POST` | `/api/telemetry/{sensorId}/float` | Ingest a `TelemetryPacket<float>` reading |
-| `POST` | `/api/telemetry/{sensorId}/int` | Ingest a `TelemetryPacket<int>` reading |
-| `POST` | `/api/telemetry/{sensorId}/bool` | Ingest a `TelemetryPacket<bool>` reading |
-| `POST` | `/api/telemetry/{sensorId}/batch` | Ingest a jagged-array batch (`float[][]`) |
-| `GET` | `/api/telemetry/{sensorId}?take=50` | Recent telemetry history |
-| `POST` | `/api/deployment/validate` | Recursively validate a deployment tree |
-| `GET` | `/api/deployment/sample` | A ready-made example deployment tree |
-| `GET` | `/api/dashboard/state` | Pre-attentive status snapshot per sensor |
-| `GET` | `/api/power/compare/{a}/{b}` | Overloaded-operator power comparison |
+| POST | `/api/sensors` | Register a sensor profile |
+| GET | `/api/sensors` | List all sensors |
+| GET | `/api/sensors/{id}` | Get one sensor |
+| DELETE | `/api/sensors/{id}` | Remove a sensor |
+| POST | `/api/sensors/{id}/media` | Multipart file upload (config/photo/log) |
+| GET | `/api/sensors/{id}/media` | List attachments |
+| GET | `/api/sensors/{id}/media/{mediaId}/download` | Download an attachment |
+| POST | `/api/telemetry/{sensorId}/float` | Ingest a `TelemetryPacket<float>` reading |
+| POST | `/api/telemetry/{sensorId}/int` | Ingest a `TelemetryPacket<int>` reading |
+| POST | `/api/telemetry/{sensorId}/bool` | Ingest a `TelemetryPacket<bool>` reading |
+| POST | `/api/telemetry/{sensorId}/batch` | Ingest a jagged-array batch (`float[][]`) |
+| GET | `/api/telemetry/{sensorId}?take=50` | Recent telemetry history |
+| POST | `/api/deployment/validate` | Recursively validate a deployment tree |
+| GET | `/api/deployment/sample` | A ready-made example deployment tree |
+| GET | `/api/dashboard/state` | Pre-attentive status snapshot per sensor |
+| GET | `/api/power/compare/{a}/{b}` | Overloaded-operator power comparison |
 
-## Design notes / known simplifications
+## Notes on the choices I made
 
-- **Storage is in-memory** (`ConcurrentDictionary`-backed singletons), by design: the brief
-  emphasises a lightweight, resource-constrained gateway, and Part 1 does not require
-  persistence across restarts. This is the natural seam to swap in EF Core / SQLite / a
-  time-series store in a later part without touching `SmartX.Core`.
-- **No authentication** is implemented in Part 1 — the brief does not call for it yet, and the
-  ingestion endpoints are meant to be reachable by simulated/physical sensors without a login
-  flow. Uploaded files are capped at 20 MB per request as a basic resource-abuse guard.
-- Mock telemetry is generated **continuously in the background**, not just once on startup —
-  this was chosen so the pre-attentive dashboard actually has something to be pre-attentive
-  *about* during a live demo, rather than sitting static.
+Storage is in-memory, backed by `ConcurrentDictionary` singletons. That's deliberate — the
+brief is about a lightweight, resource-constrained gateway, and Part 1 doesn't call for
+persistence across restarts. It's also a clean seam: EF Core, SQLite, or a proper
+time-series store can slot in later without touching `SmartX.Core`.
 
-## Repository / commit history
+There's no authentication in Part 1. The brief doesn't ask for it yet, and the ingestion
+endpoints are meant to be reachable by simulated or physical sensors without a login flow.
+Uploaded files are capped at 20 MB per request as a basic guard against resource abuse.
 
-This repository's commit history is incremental and organised by milestone (Core →
-API → Client → Docker → docs), each commit left in a state that builds and runs, so the
-history itself documents how the four required C# concepts and the functional requirements
-were layered in.
+Mock telemetry runs continuously in the background rather than being seeded once on startup.
+I wanted the pre-attentive dashboard to actually have something to be pre-attentive about
+during a live demo, rather than sitting static and green the whole time.
+
+## Commit history
+
+The commit history is organised by milestone — Core, then API, then Client, then Docker,
+then docs — and each commit leaves the project in a state that builds and runs. It's six
+commits, not the 20+ the brief suggests, because I built this in one sitting rather than
+across several. I'd rather say that plainly than pad the history with meaningless commits. As
+I extend this into Part 2, I'll commit incrementally as I actually make changes.
