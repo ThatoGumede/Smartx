@@ -1,29 +1,15 @@
-# Smart-X IoT Mesh Ecosystem — Part 2: Real-Time Processing & Device Management
+# Smart-X IoT Mesh Ecosystem Part 2
 
 This builds on my Part 1 ingestion gateway. The API (`SmartX.Api`) now puts every incoming
 reading through a two-lane queue before it is stored, tracks live devices and alert states in
-dedicated collections, supports manual override commands with undo, and suggests actions based on
+dedicated collections, supports manual override commands with undo and suggests actions based on
 what the operator has done before. The dashboard (`SmartX.Client`) gains a Real-Time Command Stream
 module, and a new console app (`SmartX.DeviceSimulator`) feeds the API the way real ESP32 devices
-would: over HTTP, never by touching the API's memory directly.
-
-```
-smartx/
-├── SmartX.sln
-├── docker-compose.yml
-├── start-all.cmd            # Windows: opens API, simulator and client in three windows
-└── src/
-    ├── SmartX.Core/            # domain types: TelemetryPacket<T>, PowerReading, AlertClassifier, DeviceCommand
-    ├── SmartX.Api/             # Minimal API, queues, stores, alert registry, action engine
-    ├── SmartX.Client/          # Razor Pages dashboard (browser JS talks to the API)
-    └── SmartX.DeviceSimulator/ # simulated ESP32 fleet posting to /api/ingest
-```
+would: over HTTP, never by touching the API's memory direct
+rr
 
 ## Running it
 
-You need the [.NET 10 SDK](https://dotnet.microsoft.com/download). On Windows the quickest route is to
-double-click `start-all.cmd` in the repo root, which opens the three windows below and then the browser.
-Doing it by hand takes three terminals, started in this order:
 
 ```
 cd src\SmartX.Api               &  dotnet run     (http://localhost:5050)
@@ -35,7 +21,7 @@ Open http://localhost:5100. With Docker instead, `docker compose up --build` sta
 containers on the same ports. The simulator reaches the API by service name inside the Docker network,
 while the client's `ApiBaseUrl` stays `http://localhost:5050` because its calls come from your browser.
 
-## Where each Part 2 requirement lives
+## Part 2 requirement
 
 | Requirement | Where |
 |---|---|
@@ -85,34 +71,6 @@ Invoke-RestMethod -Method Post "$api/api/pipeline/resume"
 (Invoke-RestMethod "$api/api/pipeline/stats").recent | Select-Object order, lane, value   # newest first
 ```
 
-**Dictionary.** Reporting from a MAC that is not registered returns 404, and registering the same MAC twice
-returns 409. Both are decided by the MAC-keyed dictionary, not a scan. MACs are case-insensitive.
-
-**SortedDictionary.** Post a backfilled batch with `POST /api/telemetry/{sensorId}/batch`, body
-`{"unit":"%","batches":[[31.1,32.2],[33.3]]}`. Its readings carry older timestamps than the live ones, yet
-`GET /api/telemetry/{sensorId}` returns everything in timestamp order and the sensor's current value is unchanged.
-
-**HashSet.** Close the simulator window and wait about 15 seconds. `GET /api/alerts` lists one active
-Disconnected alert per device, while `suppressedDuplicates` keeps rising: the monitor re-reports every silent
-device every two seconds and the set rejects the repeats. Start the simulator again and the alerts clear.
-
-**Stack.** On Command Stream, turn Pump A ON, then use All actuators ON, then Undo last command. The bulk
-command is reverted as one step, Pump A stays ON, and the history shows the undo.
-
-## Predictive engine
-
-It learns from three signals. First, a weighted graph of "device raised an alert, operator then searched for
-or commanded another device within two minutes". After a pair has been seen twice, the next alert on the first
-device produces a suggestion such as "Moisture Sensor B is Critical: turn Pump A ON", with an Apply button.
-Second, a least-squares trend over each sensor's recent readings flags a device that is still normal but
-projected to cross a warning line within 90 seconds. Third, a z-score check flags readings far outside a
-sensor's own recent behaviour. Devices named in a suggestion are outlined on the tiles.
-
-To see it quickly, click Load sample pattern history in the Test lab. This pre-loads three occurrences of
-"Moisture Sensor B alerts, operator turns Pump A ON", and is labelled as demo data in the activity log. The
-simulator drives Moisture Sensor B through a 90-second cycle (steady, ramp down, critical dip, recovery): the
-trend suggestion appears about 45 seconds in, and the Pump A suggestion appears when the critical dip starts.
-Without the sample history, search for Pump A or press ON during two dips and the engine learns it for real.
 
 ## API additions
 
