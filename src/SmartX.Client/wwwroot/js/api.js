@@ -6,9 +6,15 @@ const SmartXApi = {
         return window.SMARTX_API_BASE || "http://localhost:5050";
     },
 
+    async fail(res, method, path) {
+        let detail = "";
+        try { detail = (await res.text()).slice(0, 200); } catch { }
+        throw new Error(detail || `${method} ${path} failed: ${res.status}`);
+    },
+
     async get(path) {
         const res = await fetch(`${this.base()}${path}`);
-        if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
+        if (!res.ok) await this.fail(res, "GET", path);
         return res.json();
     },
 
@@ -16,15 +22,16 @@ const SmartXApi = {
         const res = await fetch(`${this.base()}${path}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
+            body: JSON.stringify(body ?? {}),
         });
-        if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`);
-        return res.json();
+        if (!res.ok) await this.fail(res, "POST", path);
+        const text = await res.text();
+        return text ? JSON.parse(text) : {};
     },
 
     async postForm(path, formData) {
         const res = await fetch(`${this.base()}${path}`, { method: "POST", body: formData });
-        if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`);
+        if (!res.ok) await this.fail(res, "POST", path);
         return res.json();
     },
 };
