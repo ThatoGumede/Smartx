@@ -56,3 +56,15 @@ body { background-color: #f5f7f9; }
 .legend-swatch:first-child { margin-left: 0; }
 
 #validationResult .alert { margin-bottom: 0; }
+
+/* ---- Part 2: command stream ---- */
+.spark { width: 100%; height: 28px; margin: .25rem 0; color: rgba(255,255,255,.9); }
+.tile-actions { display: flex; gap: .4rem; margin-top: .5rem; }
+.sensor-tile.flagged { outline: 3px solid #0d6efd; outline-offset: 2px; }
+.flag-chip { position: absolute; top: .4rem; right: .4rem; font-size: .62rem; background: #0d6efd; padding: .1rem .45rem; border-radius: 1rem; }
+.suggestion { border-left: 4px solid #0d6efd; background: #fff; padding: .5rem .6rem; margin-bottom: .5rem; border-radius: .25rem; }
+.suggestion.kind-Trend { border-left-color: #f9a825; }
+.suggestion.kind-Anomaly { border-left-color: #6f42c1; }
+.panel-scroll { max-height: 220px; overflow-y: auto; }
+.lane-priority { background: #c62828; color: #fff; }
+.lane-standard { background: #6c757d; color: #fff; }

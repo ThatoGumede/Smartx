@@ -1,0 +1,119 @@
+@page
+@model CommandStreamModel
+@{
+    ViewData["Title"] = "Command Stream";
+}
+
+<div id="streamRoot">
+    <div class="d-flex flex-wrap justify-content-between align-items-end mb-3">
+        <div>
+            <h1 class="h3 mb-1">Real-Time Command Stream &amp; History</h1>
+            <p class="text-secondary mb-0">
+                Live devices, manual overrides with undo, the intake pipeline, and automated insights.
+            </p>
+        </div>
+        <div class="small text-secondary">Refreshing every 2s &middot; last update <span id="lastPoll">&ndash;</span></div>
+    </div>
+
+    <div id="apiError" class="alert alert-danger py-2 d-none"></div>
+
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-5">
+                    <input id="searchBox" class="form-control" placeholder="Search by name, location, MAC or category (try: Pump A)">
+                </div>
+                <div class="col-md-3">
+                    <select id="categoryFilter" class="form-select">
+                        <option value="">All categories</option>
+                        <option value="Environmental">Environmental</option>
+                        <option value="PowerConsumption">Power Consumption</option>
+                        <option value="Actuator">Actuator</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="statusFilter" class="form-select">
+                        <option value="">All alert states</option>
+                        <option value="Normal">Normal</option>
+                        <option value="Warning">Warning</option>
+                        <option value="Critical">Critical</option>
+                        <option value="Disconnected">Disconnected</option>
+                    </select>
+                </div>
+                <div class="col-md-1"><button id="clearFilters" class="btn btn-outline-secondary w-100">Clear</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-xl-8">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small text-secondary" id="deviceCount"></span>
+                <div class="btn-group btn-group-sm">
+                    <button id="btnAllOff" class="btn btn-outline-dark">All actuators OFF</button>
+                    <button id="btnAllOn" class="btn btn-outline-dark">All actuators ON</button>
+                    <button id="btnUndo" class="btn btn-warning">Undo last command</button>
+                </div>
+            </div>
+            <div id="deviceGrid" class="tile-grid"><p class="text-secondary">Loading devices&hellip;</p></div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="card mb-3">
+                <div class="card-header">Suggested Actions / Automated Insights</div>
+                <div class="card-body">
+                    <div id="suggestions"></div>
+                    <div class="small text-secondary mt-2" id="patterns"></div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between">
+                    <span>Command history</span><span class="small text-secondary" id="undoDepth"></span>
+                </div>
+                <div class="card-body panel-scroll small" id="history"></div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between">
+                    <span>Active alerts</span><span class="small text-secondary" id="suppressed"></span>
+                </div>
+                <div class="card-body small">
+                    <div id="activeAlerts" class="mb-2"></div>
+                    <div class="panel-scroll" id="alertEvents"></div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between">
+                    <span>Intake pipeline</span><span class="small" id="pipelineState"></span>
+                </div>
+                <div class="card-body small">
+                    <div class="d-flex gap-3 mb-2" id="pipelineCounts"></div>
+                    <div class="panel-scroll" id="recentProcessed"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Test lab</div>
+                <div class="card-body small">
+                    <p class="text-secondary">
+                        Pause processing, queue routine packets, inject a critical one, then resume. The critical
+                        packet is processed first even though it arrived last.
+                    </p>
+                    <div class="d-grid gap-2">
+                        <button id="btnPause" class="btn btn-sm btn-outline-secondary">Pause processing</button>
+                        <button id="btnFlood" class="btn btn-sm btn-outline-primary">Queue 30 routine packets</button>
+                        <button id="btnCritical" class="btn btn-sm btn-outline-danger">Inject critical power spike</button>
+                        <button id="btnSeed" class="btn btn-sm btn-outline-dark">Load sample pattern history</button>
+                    </div>
+                    <div id="labNote" class="mt-2 text-secondary"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script data-page-script src="~/js/commandstream.js" asp-append-version="true"></script>
+}
