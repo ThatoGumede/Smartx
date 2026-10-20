@@ -29,15 +29,15 @@
     </div>
 
     <div class="col-md-4">
-        <div class="card h-100 pillar-card pillar-disabled">
+        <div class="card h-100 pillar-card pillar-enabled">
             <div class="card-body d-flex flex-column">
-                <span class="badge bg-secondary mb-2 align-self-start">Disabled &mdash; Part 2</span>
-                <h5 class="card-title text-muted">Real-Time Command Stream &amp; History</h5>
+                <span class="badge bg-success mb-2 align-self-start">Active &mdash; Part 2</span>
+                <h5 class="card-title">Real-Time Command Stream &amp; History</h5>
                 <p class="card-text text-secondary flex-grow-1">
-                    Bidirectional command channel to mesh nodes and full historical replay.
-                    Will be implemented in Part 2 of the Portfolio of Evidence.
+                    Live device stream with search and filters, manual override commands with undo,
+                    the priority intake queue, and predictive Suggested Actions.
                 </p>
-                <button class="btn btn-outline-secondary mt-auto" disabled>Coming in Part 2</button>
+                <a asp-page="/CommandStream" class="btn btn-primary mt-auto">Open Command Stream</a>
             </div>
         </div>
     </div>
