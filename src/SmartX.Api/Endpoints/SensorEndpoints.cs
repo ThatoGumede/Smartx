@@ -20,10 +20,12 @@ public static class SensorEndpoints
                 MacAddress = request.MacAddress,
                 DeploymentLocation = request.DeploymentLocation,
                 Category = request.Category,
+                Name = request.Name?.Trim() ?? string.Empty,
             };
 
-            store.Register(profile);
-            return Results.Created($"/api/sensors/{profile.Id}", profile);
+            return store.TryRegister(profile, out var result)
+                ? Results.Created($"/api/sensors/{result.Id}", result)
+                : Results.Conflict(new { message = "A device with that MAC address is already registered.", existing = result });
         });
 
         group.MapGet("/", (SensorStore store) => Results.Ok(store.GetAll()));

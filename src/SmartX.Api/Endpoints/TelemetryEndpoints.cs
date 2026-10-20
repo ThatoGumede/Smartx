@@ -10,71 +10,54 @@ public static class TelemetryEndpoints
     {
         var group = app.MapGroup("/api/telemetry").WithTags("Telemetry");
 
-        // Three thin endpoints, one per CLR value type a sensor can report in. Each one
-        // instantiates the SAME generic TelemetryPacket<T> with a different T - this is the
-        // concrete demonstration of the "uniform handling of disparate data structures without
-        // boxing" requirement: no `object`/`dynamic` payload anywhere in this pipeline.
-        group.MapPost("/{sensorId}/float", (string sensorId, FloatTelemetryRequest body,
-            SensorStore sensors, TelemetryStore telemetry) =>
-        {
-            var packet = new TelemetryPacket<float>(sensorId, body.Value, body.Unit);
-            return Ingest(sensorId, packet.ToRecord(), sensors, telemetry);
-        });
+        // Id-based typed endpoints (Part 1). Each builds the same generic TelemetryPacket<T> with a
+        // different T, then hands it to the pipeline. They return 202: the packet is queued, not yet stored.
+        group.MapPost("/{sensorId}/float", (string sensorId, FloatTelemetryRequest body, SensorStore sensors, TelemetryPipeline pipeline) =>
+            Submit(sensorId, new TelemetryPacket<float>(sensorId, body.Value, body.Unit).ToRecord(), sensors, pipeline));
 
-        group.MapPost("/{sensorId}/int", (string sensorId, IntTelemetryRequest body,
-            SensorStore sensors, TelemetryStore telemetry) =>
-        {
-            var packet = new TelemetryPacket<int>(sensorId, body.Value, body.Unit);
-            return Ingest(sensorId, packet.ToRecord(), sensors, telemetry);
-        });
+        group.MapPost("/{sensorId}/int", (string sensorId, IntTelemetryRequest body, SensorStore sensors, TelemetryPipeline pipeline) =>
+            Submit(sensorId, new TelemetryPacket<int>(sensorId, body.Value, body.Unit).ToRecord(), sensors, pipeline));
 
-        group.MapPost("/{sensorId}/bool", (string sensorId, BoolTelemetryRequest body,
-            SensorStore sensors, TelemetryStore telemetry) =>
-        {
-            var packet = new TelemetryPacket<bool>(sensorId, body.Value, body.Unit);
-            return Ingest(sensorId, packet.ToRecord(), sensors, telemetry);
-        });
+        group.MapPost("/{sensorId}/bool", (string sensorId, BoolTelemetryRequest body, SensorStore sensors, TelemetryPipeline pipeline) =>
+            Submit(sensorId, new TelemetryPacket<bool>(sensorId, body.Value, body.Unit).ToRecord(), sensors, pipeline));
 
-        // Accepts a jagged array of historical batches (float[][]), flattens it through
-        // TelemetryBatchBuffer into a List<TelemetryPacket<float>>, then commits it.
-        group.MapPost("/{sensorId}/batch", (string sensorId, BatchTelemetryRequest body,
-            SensorStore sensors, TelemetryStore telemetry) =>
+        // Jagged-array batch: float[][] -> TelemetryBatchBuffer -> List<TelemetryPacket<float>> -> pipeline.
+        // Batches carry older timestamps; the SortedDictionary timeline puts them in order when stored.
+        group.MapPost("/{sensorId}/batch", (string sensorId, BatchTelemetryRequest body, SensorStore sensors, TelemetryPipeline pipeline) =>
         {
-            if (sensors.Get(sensorId) is null)
-                return Results.NotFound($"Sensor '{sensorId}' is not registered.");
+            var sensor = sensors.Get(sensorId);
+            if (sensor is null) return Results.NotFound($"Sensor '{sensorId}' is not registered.");
 
             var buffer = new TelemetryBatchBuffer();
             buffer.LoadBatches(body.Batches);
             var (totalSamples, average, largestBatchSize) = buffer.Summarise();
 
             List<TelemetryPacket<float>> packets = buffer.FlattenToPackets(sensorId, body.Unit);
-            telemetry.AddRange(packets.Select(p => p.ToRecord()));
+            foreach (var packet in packets)
+                pipeline.Enqueue(packet.ToRecord(), sensor.Category);
 
-            if (packets.Count > 0)
-                sensors.Touch(sensorId, packets[^1].Timestamp);
-
-            return Results.Ok(new
+            return Results.Accepted(null, new
             {
                 sensorId,
                 batchesReceived = body.Batches.Length,
                 totalSamples,
                 average,
                 largestBatchSize,
-                packetsCommitted = packets.Count,
+                packetsQueued = packets.Count,
             });
         });
 
+        // History is read from the SortedDictionary, so it always comes back in timestamp order.
         group.MapGet("/{sensorId}", (string sensorId, int take, TelemetryStore telemetry) =>
             Results.Ok(telemetry.GetHistory(sensorId, take <= 0 ? 50 : take)));
     }
 
-    private static IResult Ingest(string sensorId, TelemetryRecord record, SensorStore sensors, TelemetryStore telemetry)
+    private static IResult Submit(string sensorId, TelemetryRecord record, SensorStore sensors, TelemetryPipeline pipeline)
     {
-        if (sensors.Get(sensorId) is null)
-            return Results.NotFound($"Sensor '{sensorId}' is not registered.");
+        var sensor = sensors.Get(sensorId);
+        if (sensor is null) return Results.NotFound($"Sensor '{sensorId}' is not registered.");
 
-        telemetry.Add(record);
-        sensors.Touch(sensorId, record.Timestamp);
-        return Results.Ok(record);
+        var lane = pipeline.Enqueue(record, sensor.Category);
+        return Results.Accepted($"/api/telemetry/{sensorId}", new { sensorId, lane });
     }
 }
