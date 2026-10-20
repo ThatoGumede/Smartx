@@ -8,6 +8,10 @@ module, and a new console app (`SmartX.DeviceSimulator`) feeds the API the way r
 would: over HTTP, never by touching the API's memory direct
 rr
 
+
+### Demo video link: https://youtu.be/Gc65on-B_zQ 
+
+
 ## Running it
 
 
