@@ -69,7 +69,6 @@ Invoke-RestMethod -Method Post "$api/api/pipeline/resume"
 | GET | `/api/insights` | Suggested actions, learned patterns, recent activity |
 | POST | `/api/activity/search`, `/api/insights/seed-demo` | Report a search; load sample pattern history |
 
-The Part 1 endpoints still work. The id-based telemetry routes now return 202 because they also go through the queue.
 
 ## Notes
 
