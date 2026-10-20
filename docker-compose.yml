@@ -1,9 +1,9 @@
-# Brings up the Smart-X ingestion gateway (API) and configuration dashboard (Client)
-# together. Run with:  docker compose up --build
+# Brings up the Smart-X gateway (API), the simulated device fleet, and the dashboard (Client).
+# Run with:  docker compose up --build
 #
-# Note: the Client's ApiBaseUrl is a browser-visible URL (http://localhost:5050), not the
-# internal Docker network address - all API calls are made client-side, from JavaScript
-# running in the user's browser, not server-to-server between the two containers.
+# The Client's ApiBaseUrl is a browser-visible URL (http://localhost:5050): its API calls come from
+# JavaScript in the user's browser, not from the container. The simulator is the opposite - it runs
+# inside the Docker network, so it reaches the API by its service name.
 
 services:
   smartx-api:
@@ -18,6 +18,17 @@ services:
       - AllowedClientOrigins__0=http://localhost:5100
     volumes:
       - smartx-uploads:/app/App_Data/uploads
+    restart: unless-stopped
+
+  smartx-simulator:
+    build:
+      context: ./src
+      dockerfile: SmartX.DeviceSimulator/Dockerfile
+    container_name: smartx-simulator
+    environment:
+      - SMARTX_API_URL=http://smartx-api:8080
+    depends_on:
+      - smartx-api
     restart: unless-stopped
 
   smartx-client:
