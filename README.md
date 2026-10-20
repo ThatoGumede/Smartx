@@ -21,25 +21,7 @@ Open http://localhost:5100. With Docker instead, `docker compose up --build` sta
 containers on the same ports. The simulator reaches the API by service name inside the Docker network,
 while the client's `ApiBaseUrl` stays `http://localhost:5050` because its calls come from your browser.
 
-## Part 2 requirement
-
-| Requirement | Where |
-|---|---|
-| Navigation menu, async navigation without losing state | `Pages/Shared/_Layout.cshtml`, `wwwroot/js/nav.js` |
-| Command Stream page, overrides, search and filters | `Pages/CommandStream.cshtml`, `wwwroot/js/commandstream.js`, `GET /api/stream/snapshot` |
-| `Queue<T>` for incoming telemetry (FIFO) | `Services/TelemetryPipeline.cs`, standard lane |
-| `PriorityQueue` for critical alerts | `Services/TelemetryPipeline.cs`, priority lane |
-| `Stack<T>` of override commands with Undo | `Services/CommandService.cs` |
-| `Dictionary` of live devices keyed by MAC | `Services/SensorStore.cs`, used by `POST /api/ingest` |
-| `SortedDictionary` of history by timestamp | `Services/TelemetryStore.cs` |
-| `HashSet<T>` of active/duplicate alert states | `Services/AlertRegistry.cs` |
-| Predictive engine, "Suggested Actions" | `Services/ActionEngine.cs`, shown in the Command Stream sidebar |
-
-Navigation is handled by `nav.js`: clicking a menu link fetches the page in the background and swaps only
-the main content, so the window, the navbar and the saved filters survive. Page timers are stopped when you
-leave and restarted when you return. If the background fetch ever fails it falls back to a normal page load.
-Filters are kept in `sessionStorage`, so they also survive a refresh.
-
+## Part 2
 ## How the queue works
 
 `POST /api/ingest` looks the device up by MAC, wraps the reading in the matching `TelemetryPacket<T>`, and
