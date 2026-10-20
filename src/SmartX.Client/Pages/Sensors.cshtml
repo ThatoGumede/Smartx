@@ -8,7 +8,7 @@
 <p class="text-secondary">
     Register a sensor payload, attach device media, and validate its deployment location
     against the nested Facility &rarr; Zone &rarr; Sub-Zone &rarr; Node tree. Newly registered
-    sensors automatically start receiving simulated telemetry so you can see them appear on
+    sensors start receiving simulated telemetry once the device simulator is running, so you can see them appear on
     the <a asp-page="/Dashboard">live dashboard</a> within a few seconds.
 </p>
 
@@ -19,6 +19,10 @@
             <div class="card-header">Register Sensor Payload</div>
             <div class="card-body">
                 <form id="registerForm" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label">Device Name (optional)</label>
+                        <input type="text" class="form-control" id="sensorName" placeholder="Pump A">
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Device MAC Address / Unique Identifier</label>
                         <input type="text" class="form-control" id="macAddress" placeholder="24:6F:28:AA:01:09" required>
@@ -87,5 +91,5 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/sensors.js" asp-append-version="true"></script>
+    <script data-page-script src="~/js/sensors.js" asp-append-version="true"></script>
 }

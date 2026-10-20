@@ -1,3 +1,4 @@
+(function () {
 // Sensor console: registration, live listing, media attachment, and recursive
 // deployment-tree validation. Everything here talks to SmartX.Api via SmartXApi (api.js).
 
@@ -22,6 +23,8 @@ const SAMPLE_TREE = {
     ],
 };
 
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
 function categoryBadge(category) {
     const colors = { Environmental: "success", PowerConsumption: "warning", Actuator: "info" };
     return `<span class="badge bg-${colors[category] || "secondary"}">${category}</span>`;
@@ -38,9 +41,9 @@ async function loadSensors() {
 
         body.innerHTML = sensors.map(s => `
             <tr>
-                <td class="small">${s.deploymentLocation}</td>
+                <td class="small"><strong>${esc(s.displayName)}</strong><br>${esc(s.deploymentLocation)}</td>
                 <td>${categoryBadge(s.category)}</td>
-                <td class="small font-monospace">${s.macAddress}</td>
+                <td class="small font-monospace">${esc(s.macAddress)}</td>
                 <td class="small">${s.attachments.length} file(s)</td>
                 <td>
                     <form class="d-flex gap-1 upload-form" data-sensor-id="${s.id}">
@@ -55,7 +58,7 @@ async function loadSensors() {
             form.addEventListener("submit", onUploadSubmit);
         });
     } catch (err) {
-        body.innerHTML = `<tr><td colspan="5" class="text-danger py-3">Could not reach the API: ${err.message}</td></tr>`;
+        body.innerHTML = `<tr><td colspan="5" class="text-danger py-3">Could not reach the API: ${esc(err.message)}</td></tr>`;
     }
 }
 
@@ -86,6 +89,7 @@ document.getElementById("registerForm").addEventListener("submit", async (evt) =
     evt.preventDefault();
     const status = document.getElementById("registerStatus");
     const payload = {
+        name: document.getElementById("sensorName").value.trim(),
         macAddress: document.getElementById("macAddress").value.trim(),
         deploymentLocation: document.getElementById("deploymentLocation").value.trim(),
         category: document.getElementById("category").value,
@@ -139,3 +143,5 @@ document.getElementById("validateBtn").addEventListener("click", async () => {
 
 document.getElementById("deploymentTree").value = JSON.stringify(SAMPLE_TREE, null, 2);
 loadSensors();
+
+})();

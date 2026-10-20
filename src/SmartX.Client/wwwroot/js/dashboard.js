@@ -1,41 +1,43 @@
-// Live pre-attentive telemetry dashboard. Polls /api/dashboard/state every 3s and paints
-// each sensor as a coloured, pulsing tile - the API has already computed Status (Normal /
-// Warning / Critical / Disconnected), so this file does no threshold logic of its own; it
-// only maps a status string to a colour band and a pulse rate.
+// Part 1 live telemetry dashboard: polls /api/dashboard/state and paints each sensor as a coloured,
+// pulsing tile. The API computes the status; this file only maps it to a colour and a pulse.
+(function () {
+    const POLL_INTERVAL_MS = 3000;
+    const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-const POLL_INTERVAL_MS = 3000;
+    function renderTiles(snapshots) {
+        const grid = document.getElementById("tileGrid");
+        if (!grid) return;
 
-function renderTiles(snapshots) {
-    const grid = document.getElementById("tileGrid");
+        if (snapshots.length === 0) {
+            grid.innerHTML = `<p class="text-secondary">No sensors registered yet. Go to <a href="/Sensors">Sensor Ingestion</a> to add one, or start the device simulator.</p>`;
+            return;
+        }
 
-    if (snapshots.length === 0) {
-        grid.innerHTML = `<p class="text-secondary">No sensors registered yet. Go to <a href="/Sensors">Sensor Ingestion</a> to add one.</p>`;
-        return;
+        grid.innerHTML = snapshots.map(s => {
+            const pulsing = s.status !== "Disconnected" ? "pulsing" : "";
+            const lastSeen = s.lastSeen ? new Date(s.lastSeen).toLocaleTimeString() : "never";
+            return `
+                <div class="sensor-tile status-${s.status} ${pulsing}" title="${esc(s.displayLabel)}">
+                    <div class="label">${esc(s.displayLabel)}</div>
+                    <div class="value">${esc(s.latestValue)}</div>
+                    <div class="meta">${s.status} &middot; last seen ${lastSeen}</div>
+                </div>`;
+        }).join("");
     }
 
-    grid.innerHTML = snapshots.map(s => {
-        const pulsing = s.status !== "Disconnected" ? "pulsing" : "";
-        const lastSeen = s.lastSeen ? new Date(s.lastSeen).toLocaleTimeString() : "never";
-        return `
-            <div class="sensor-tile status-${s.status} ${pulsing}" title="${s.displayLabel}">
-                <div class="label">${s.displayLabel}</div>
-                <div class="value">${s.latestValue}</div>
-                <div class="meta">${s.status} &middot; last seen ${lastSeen}</div>
-            </div>
-        `;
-    }).join("");
-}
-
-async function pollDashboard() {
-    try {
-        const snapshots = await SmartXApi.get("/api/dashboard/state");
-        renderTiles(snapshots);
-        document.getElementById("lastPoll").textContent = new Date().toLocaleTimeString();
-    } catch (err) {
-        document.getElementById("tileGrid").innerHTML =
-            `<p class="text-danger">Could not reach the API at ${SmartXApi.base()}: ${err.message}</p>`;
+    async function pollDashboard() {
+        if (!document.getElementById("tileGrid")) return;
+        try {
+            const snapshots = await SmartXApi.get("/api/dashboard/state");
+            if (!document.getElementById("tileGrid")) return;
+            renderTiles(snapshots);
+            document.getElementById("lastPoll").textContent = new Date().toLocaleTimeString();
+        } catch (err) {
+            const grid = document.getElementById("tileGrid");
+            if (grid) grid.innerHTML = `<p class="text-danger">Could not reach the API at ${esc(SmartXApi.base())}: ${esc(err.message)}</p>`;
+        }
     }
-}
 
-pollDashboard();
-setInterval(pollDashboard, POLL_INTERVAL_MS);
+    pollDashboard();
+    SmartXPage.every(pollDashboard, POLL_INTERVAL_MS);
+})();
