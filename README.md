@@ -78,7 +78,9 @@ There is no authentication yet.
 I tested the API, the simulator and the page scripts end to end on Linux with .NET 10, including a headless run
 of the Command Stream script. I have not run the Docker images or `start-all.cmd` on Windows myself.
 
-References
+##References
+
+
 Cvach, M., 2012. Monitor alarm fatigue: an integrative review. Biomedical Instrumentation & Technology, 46(4), pp.268–277.
 Fusco, R., Granata, V., Setola, S.V., Pupo, D., Petrosino, T., Lamanna, C.P., Castaldo, M., Riga, M.G., Karaboue, M.A., Izzo, F. and Petrillo, A., 2025. Visual perception and pre-attentive attributes in oncological data visualisation. Bioengineering, 12(7), p.782.
 Miller, G.A., 1956. The magical number seven, plus or minus two: some limits on our capacity for processing information. Psychological Review, 63(2), pp.81–97.
