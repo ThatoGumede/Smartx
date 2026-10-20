@@ -10,6 +10,11 @@ public class SensorProfile
     public string Id { get; set; } = Guid.NewGuid().ToString("N")[..8];
     public required string MacAddress { get; set; }
 
+    /// <summary>Friendly device name, e.g. "Pump A" or "Moisture Sensor B".</summary>
+    public string Name { get; set; } = string.Empty;
+
+    public string DisplayName => string.IsNullOrWhiteSpace(Name) ? $"{Category} {Id}" : Name;
+
     /// <summary>Human-readable deployment location, e.g. "Facility A / Zone 1 / Sub-Zone B / Node 4".</summary>
     public required string DeploymentLocation { get; set; }
 
