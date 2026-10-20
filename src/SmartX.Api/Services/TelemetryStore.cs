@@ -1,82 +1,67 @@
-using System.Collections.Concurrent;
-using SmartX.Core.Dashboard;
 using SmartX.Core.Telemetry;
 
 namespace SmartX.Api.Services;
 
 /// <summary>
-/// Stores the recent telemetry history for every sensor and derives the pre-attentive
-/// <see cref="SensorStatus"/> the dashboard renders (see the Part 1 research report:
-/// colour/outline encoding rather than a plain progress bar). A bounded deque-like list per
-/// sensor keeps memory use predictable even under the heavy mock load the brief asks for.
+/// Historical sensor logs. Each sensor owns a <see cref="SortedDictionary{TKey,TValue}"/> keyed by
+/// timestamp, so the history is always in chronological order no matter what order packets arrive
+/// in - a reconnecting node can upload a backfilled batch of old readings and they slot into the
+/// right place. The timeline graphs read straight off the sorted values. A separate dictionary
+/// holds the latest reading per sensor so "current value" is O(1).
 /// </summary>
 public class TelemetryStore
 {
-    private const int MaxHistoryPerSensor = 200;
-    private static readonly TimeSpan DisconnectAfter = TimeSpan.FromSeconds(12);
+    private const int MaxHistoryPerSensor = 500;
 
-    private readonly ConcurrentDictionary<string, List<TelemetryRecord>> _history = new();
+    private readonly Dictionary<string, SortedDictionary<DateTimeOffset, TelemetryRecord>> _history = new();
+    private readonly Dictionary<string, TelemetryRecord> _latest = new();
     private readonly object _lock = new();
 
     public void Add(TelemetryRecord record)
     {
         lock (_lock)
         {
-            var list = _history.GetOrAdd(record.SensorId, _ => []);
-            list.Add(record);
-            if (list.Count > MaxHistoryPerSensor)
-                list.RemoveAt(0);
+            if (!_history.TryGetValue(record.SensorId, out var log))
+                _history[record.SensorId] = log = new SortedDictionary<DateTimeOffset, TelemetryRecord>();
+
+            // Two packets can share a timestamp; nudge by a tick so neither is lost.
+            var key = record.Timestamp;
+            while (log.ContainsKey(key)) key = key.AddTicks(1);
+            log[key] = record;
+
+            if (log.Count > MaxHistoryPerSensor)
+                log.Remove(log.Keys.First());
+
+            if (!_latest.TryGetValue(record.SensorId, out var current) || record.Timestamp >= current.Timestamp)
+                _latest[record.SensorId] = record;
         }
     }
 
     public void AddRange(IEnumerable<TelemetryRecord> records)
     {
-        foreach (var record in records)
-            Add(record);
+        foreach (var record in records) Add(record);
     }
 
+    /// <summary>The most recent <paramref name="take"/> readings, oldest first.</summary>
     public IReadOnlyList<TelemetryRecord> GetHistory(string sensorId, int take = 50)
     {
-        if (!_history.TryGetValue(sensorId, out var list))
-            return [];
-
         lock (_lock)
         {
-            return list.Skip(Math.Max(0, list.Count - take)).ToList();
+            if (!_history.TryGetValue(sensorId, out var log)) return [];
+            return log.Values.Skip(Math.Max(0, log.Count - take)).ToList();
         }
     }
 
     public TelemetryRecord? GetLatest(string sensorId)
     {
-        if (!_history.TryGetValue(sensorId, out var list) || list.Count == 0)
-            return null;
-
-        lock (_lock)
-        {
-            return list[^1];
-        }
+        lock (_lock) return _latest.GetValueOrDefault(sensorId);
     }
 
-    /// <summary>
-    /// Derives the pre-attentive status for one sensor: grey/Disconnected if nothing has
-    /// arrived recently, red/Critical if the latest numeric reading breaches its band,
-    /// amber/Warning if it is close, otherwise green/Normal.
-    /// </summary>
-    public SensorStatus ComputeStatus(string sensorId, double warningBand, double criticalBand)
+    /// <summary>Numeric view of the timeline (booleans become 1/0) for sparklines and trend analysis.</summary>
+    public List<(DateTimeOffset At, double Value)> GetPoints(string sensorId, int take)
     {
-        var latest = GetLatest(sensorId);
-        if (latest is null)
-            return SensorStatus.Disconnected;
-
-        if (DateTimeOffset.UtcNow - latest.Timestamp > DisconnectAfter)
-            return SensorStatus.Disconnected;
-
-        if (latest.NumericValue is not { } value)
-            return SensorStatus.Normal; // boolean/actuator channels don't use threshold bands
-
-        double magnitude = Math.Abs(value);
-        if (magnitude >= criticalBand) return SensorStatus.Critical;
-        if (magnitude >= warningBand) return SensorStatus.Warning;
-        return SensorStatus.Normal;
+        return GetHistory(sensorId, take)
+            .Select(r => (r.Timestamp, r.NumericValue ?? (r.BoolValue == true ? 1d : 0d)))
+            .ToList();
     }
 }
