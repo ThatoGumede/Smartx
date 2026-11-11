@@ -38,6 +38,10 @@ builder.Services.AddSingleton<TelemetryPipeline>();
 builder.Services.AddSingleton<AlertRegistry>();
 builder.Services.AddSingleton<ActionEngine>();
 builder.Services.AddSingleton<CommandService>();
+builder.Services.AddSingleton<HistoryArchive>();
+builder.Services.AddSingleton<MeshRegistry>();
+builder.Services.AddSingleton<TopologyService>();
+builder.Services.AddSingleton<FaultInjection>();
 builder.Services.AddHostedService<TelemetryProcessorService>();
 builder.Services.AddHostedService<DisconnectMonitorService>();
 
@@ -55,7 +59,7 @@ app.MapGet("/", () => Results.Ok(new
     endpoints = new[]
     {
         "/api/sensors", "/api/sensors/{id}/media", "/api/telemetry/{sensorId}/{float|int|bool|batch}",
-        "/api/ingest", "/api/stream/snapshot", "/api/pipeline/stats", "/api/commands", "/api/insights",
+        "/api/ingest", "/api/mesh/topology", "/api/history/{id}/range", "/api/stream/snapshot", "/api/pipeline/stats", "/api/commands", "/api/insights",
         "/api/dashboard/state", "/api/power/compare/{a}/{b}", "/api/deployment/validate",
     },
 }));
@@ -67,6 +71,9 @@ app.MapIngestEndpoints();
 app.MapStreamEndpoints();
 app.MapCommandEndpoints();
 app.MapInsightEndpoints();
+app.MapMeshEndpoints();
+app.MapHistoryEndpoints();
+app.MapSimulationEndpoints();
 app.MapDeploymentEndpoints();
 app.MapDashboardEndpoints();
 app.MapPowerEndpoints();

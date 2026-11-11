@@ -11,7 +11,8 @@ public class TelemetryProcessorService(
     TelemetryPipeline pipeline,
     TelemetryStore telemetry,
     SensorStore sensors,
-    AlertRegistry alerts) : BackgroundService
+    AlertRegistry alerts,
+    HistoryArchive archive) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -41,6 +42,7 @@ public class TelemetryProcessorService(
         if (sensor is null) return; // device was removed while its packet was queued
 
         telemetry.Add(packet.Record);
+        archive.Add(packet.Record);
         sensors.Touch(sensor.Id, DateTimeOffset.UtcNow);
 
         var status = AlertClassifier.Classify(sensor.Category, packet.Record.NumericValue).Status;

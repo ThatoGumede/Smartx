@@ -47,6 +47,20 @@ public class SensorStore
         lock (_lock) return _macById.TryGetValue(id, out var mac) ? _byMac[mac] : null;
     }
 
+    /// <summary>Finds a device by MAC, short id, exact name, or (last resort) a name fragment.</summary>
+    public SensorProfile? Resolve(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return null;
+        key = key.Trim();
+        lock (_lock)
+        {
+            if (_byMac.TryGetValue(NormaliseMac(key), out var byMac)) return byMac;
+            if (_macById.TryGetValue(key, out var mac)) return _byMac[mac];
+            return _byMac.Values.FirstOrDefault(s => s.DisplayName.Equals(key, StringComparison.OrdinalIgnoreCase))
+                ?? _byMac.Values.OrderBy(s => s.DisplayName).FirstOrDefault(s => s.DisplayName.Contains(key, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
     public IReadOnlyList<SensorProfile> GetAll()
     {
         lock (_lock) return _byMac.Values.OrderBy(s => s.DeploymentLocation).ThenBy(s => s.DisplayName).ToList();
