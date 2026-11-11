@@ -43,15 +43,15 @@
     </div>
 
     <div class="col-md-4">
-        <div class="card h-100 pillar-card pillar-disabled">
+        <div class="card h-100 pillar-card pillar-enabled">
             <div class="card-body d-flex flex-column">
-                <span class="badge bg-secondary mb-2 align-self-start">Disabled &mdash; Final PoE</span>
-                <h5 class="card-title text-muted">Network Topology &amp; Mesh Routing</h5>
+                <span class="badge bg-success mb-2 align-self-start">Active &mdash; Final PoE</span>
+                <h5 class="card-title">Network Topology &amp; Mesh Routing</h5>
                 <p class="card-text text-secondary flex-grow-1">
-                    Visual mesh map and routing diagnostics across facilities, zones and
-                    sub-zones. Will be implemented in the final Portfolio of Evidence.
+                    The live mesh as a graph, routes traced to the gateway by MAC address, self-healing
+                    around failed nodes, and an indexed history for every sensor.
                 </p>
-                <button class="btn btn-outline-secondary mt-auto" disabled>Coming in Final PoE</button>
+                <a asp-page="/Topology" class="btn btn-primary mt-auto">Open Network Topology</a>
             </div>
         </div>
     </div>

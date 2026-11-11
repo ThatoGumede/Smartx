@@ -41,7 +41,7 @@
                     <div class="label">${esc(d.location)}</div>
                     <div class="value">${esc(d.latestValue)}</div>
                     ${sparkline(d.series)}
-                    <div class="meta">${esc(d.category)} &middot; ${d.status} &middot; ${clock(d.lastSeen)}</div>
+                    <div class="meta">${esc(d.category)} &middot; ${d.status} &middot; ${clock(d.lastSeen)} &middot; <a class="tile-link" href="/Topology?node=${encodeURIComponent(d.macAddress)}">Trace route</a></div>
                     ${actions}
                 </div>`;
         }).join("");
