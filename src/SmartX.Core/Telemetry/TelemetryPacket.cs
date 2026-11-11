@@ -54,6 +54,10 @@ public readonly struct TelemetryPacket<T> where T : struct
             case bool b:
                 flag = b;
                 break;
+            case float f:
+                // Round-trip through the shortest decimal form so 48.6f becomes 48.6, not 48.599998474121094.
+                numeric = double.Parse(f.ToString("R", System.Globalization.CultureInfo.InvariantCulture), System.Globalization.CultureInfo.InvariantCulture);
+                break;
             case IConvertible convertible:
                 numeric = convertible.ToDouble(System.Globalization.CultureInfo.InvariantCulture);
                 break;

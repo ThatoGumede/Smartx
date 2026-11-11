@@ -82,8 +82,8 @@ public class HistoryArchive
             return new HistoryQueryResult(
                 records.Count, result.NodesVisited, tree.Count, tree.Height, tree.MinimumPossibleHeight,
                 Math.Round(timer.Elapsed.TotalMilliseconds, 3), records.Count > take,
-                numeric.Count > 0 ? numeric.Min() : null,
-                numeric.Count > 0 ? numeric.Max() : null,
+                numeric.Count > 0 ? Math.Round(numeric.Min(), 2) : null,
+                numeric.Count > 0 ? Math.Round(numeric.Max(), 2) : null,
                 numeric.Count > 0 ? Math.Round(numeric.Average(), 2) : null,
                 onCount, oldest, newest,
                 records.Skip(Math.Max(0, records.Count - take)).ToList());
