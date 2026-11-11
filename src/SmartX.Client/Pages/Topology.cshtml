@@ -1,0 +1,98 @@
+@page
+@model TopologyModel
+@{
+    ViewData["Title"] = "Network Topology";
+}
+
+<div id="topoRoot">
+    <div class="d-flex flex-wrap justify-content-between align-items-end mb-3">
+        <div>
+            <h1 class="h3 mb-1">Network Topology &amp; Mesh Routing</h1>
+            <p class="text-secondary mb-0">The live mesh as a graph, the power-efficient routing tree, and an indexed history for every sensor.</p>
+        </div>
+        <div class="small text-secondary">Refreshing every 3s &middot; last update <span id="lastPoll">&ndash;</span></div>
+    </div>
+
+    <div id="apiError" class="alert alert-danger py-2 d-none"></div>
+    <div id="summary" class="d-flex flex-wrap gap-2 mb-3"></div>
+
+    <div class="row g-3">
+        <div class="col-xl-8">
+            <div class="card mb-3">
+                <div class="card-header d-flex flex-wrap justify-content-between gap-2">
+                    <span>Mesh network <span class="text-secondary small">(click a node to trace its route)</span></span>
+                    <span class="small legend-inline">
+                        <span class="lg lg-tree"></span> routing tree
+                        <span class="lg lg-link"></span> spare link
+                        <span class="lg lg-dead"></span> down link
+                        <span class="lg lg-route"></span> selected route
+                    </span>
+                </div>
+                <div class="card-body p-2">
+                    <svg id="meshSvg" viewBox="0 0 800 520" class="mesh-svg" role="img" aria-label="Mesh network diagram"></svg>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <span>Historical telemetry log</span><span class="small text-secondary" id="logTitle">select a node</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-4"><label class="form-label small mb-0">From</label><input type="datetime-local" id="logFrom" class="form-control form-control-sm"></div>
+                        <div class="col-md-4"><label class="form-label small mb-0">To</label><input type="datetime-local" id="logTo" class="form-control form-control-sm"></div>
+                        <div class="col-md-4 d-flex align-items-end gap-1 flex-wrap">
+                            <button class="btn btn-sm btn-outline-secondary" data-range="1">1h</button>
+                            <button class="btn btn-sm btn-outline-secondary" data-range="6">6h</button>
+                            <button class="btn btn-sm btn-outline-secondary" data-range="24">24h</button>
+                            <button class="btn btn-sm btn-primary" id="btnQuery">Run query</button>
+                        </div>
+                    </div>
+                    <div id="logSummary" class="small mb-2 text-secondary">Choose a node on the map or in the route tracker.</div>
+                    <svg id="logChart" viewBox="0 0 600 110" class="log-chart d-none" preserveAspectRatio="none"></svg>
+                    <div class="panel-scroll-lg mt-2">
+                        <table class="table table-sm table-striped mb-0 small">
+                            <thead><tr><th>Time</th><th>Value</th></tr></thead>
+                            <tbody id="logRows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="card mb-3">
+                <div class="card-header">Route tracker</div>
+                <div class="card-body">
+                    <div class="input-group mb-2">
+                        <input id="nodeInput" list="nodeList" class="form-control" placeholder="MAC address, id or name">
+                        <button id="btnTrace" class="btn btn-primary">Trace</button>
+                    </div>
+                    <datalist id="nodeList"></datalist>
+                    <div id="routeResult" class="small text-secondary">Enter a device to see how its data reaches the gateway.</div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">Failure test lab</div>
+                <div class="card-body small">
+                    <p class="text-secondary mb-2">Silences the simulated device so it stops reporting, as a real fault would. The gateway notices after about 12 seconds and the routing tree heals.</p>
+                    <div class="d-grid gap-2">
+                        <button id="btnFail" class="btn btn-sm btn-outline-danger">Take selected node offline</button>
+                        <button id="btnRestore" class="btn btn-sm btn-outline-success">Bring selected node back</button>
+                    </div>
+                    <div id="labNote" class="mt-2 text-secondary"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Connectivity (breadth-first search)</div>
+                <div class="card-body small" id="connectivity"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script data-page-script src="~/js/topology.js" asp-append-version="true"></script>
+}
