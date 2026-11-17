@@ -198,21 +198,6 @@ Invoke-RestMethod "$api/api/mesh/route/Moisture%20Sensor%20B"       # rerouted: 
 Invoke-RestMethod -Method Delete "$api/api/simulation/faults/Moisture%20Sensor%20A" # bring it back
 ```
 
-### Testing the Part 2 structures
-
-The Command Stream page has a Test lab that drives these through the same API a device uses.
-
-- **Priority queue**: click Pause processing, Queue 30 routine packets, then Inject critical power spike, then Resume.
-  In the Intake pipeline panel the critical reading has lane `priority` and a lower `#` than the routine packets,
-  although it was sent last. The same from PowerShell: `POST /api/pipeline/pause`, many `POST /api/ingest` calls, one
-  with `"number":3100` for a power meter, `POST /api/pipeline/resume`, then `GET /api/pipeline/stats` (the `recent`
-  list is newest first).
-- **Dictionary**: `POST /api/ingest` with an unregistered MAC returns 404; registering the same MAC twice returns 409.
-- **HashSet**: stop the simulator and wait about 15 seconds. `GET /api/alerts` shows one active Disconnected alert per
-  device while `suppressedDuplicates` keeps rising, because the set rejects the repeats.
-- **Stack**: turn Pump A ON, use All actuators ON, then Undo last command; the bulk command reverts as one step.
-- **SortedDictionary**: `POST /api/telemetry/{id}/batch` with older readings; `GET /api/telemetry/{id}` returns them in
-  timestamp order.
 
 ## API summary
 
@@ -227,8 +212,7 @@ The Command Stream page has a Test lab that drives these through the same API a 
 | GET | `/api/history/{key}/stats` | Archive size, tree height, rotations |
 | GET/POST/DELETE | `/api/simulation/faults[/{key}]` | Silence or restore a simulated node (test lab) |
 
-Parts 1 and 2 routes (`/api/ingest`, `/api/sensors`, `/api/stream/snapshot`, `/api/commands`, `/api/insights`,
-`/api/pipeline/*`, `/api/alerts`) are unchanged.
+
 
 ## Limits
 
